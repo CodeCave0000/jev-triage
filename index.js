@@ -20,7 +20,8 @@ const QUESTIONS = {
   },
 };
 
-const verdicts = new Map();
+const verdicts = new Map(); // the verdict for the message about to reach the model
+const earlier = new Map(); // this chat's earlier verdicts: the history keeps the messages, not the tags
 
 export default definePluginEntry({
   id: "jev-triage",
@@ -44,14 +45,22 @@ export default definePluginEntry({
       if (sure < 0.9) return; // not sure enough: the message goes to the main model untouched
       if (kind.choice === "thanks") return { handled: true, text: "בשמחה! 🙂" };
       if (kind.choice === "spam") return { handled: true }; // silence, no model call
-      verdicts.set(ctx.sessionKey ?? "", `${kind.choice}, urgent ${urgent.probabilityTrue.toFixed(2)}`);
+      verdicts.set(ctx.sessionKey ?? "", { text, verdict: `${kind.choice}, urgent ${urgent.probabilityTrue.toFixed(2)}` });
     });
 
     // then the main model gets the decision instead of making it again
     api.on("before_prompt_build", (event, ctx) => {
-      const v = verdicts.get(ctx.sessionKey ?? "");
-      verdicts.delete(ctx.sessionKey ?? "");
-      if (v) return { prependContext: `[triage by Jev: ${v}]` };
+      const key = ctx.sessionKey ?? "";
+      const now = verdicts.get(key);
+      verdicts.delete(key);
+      const notes = (earlier.get(key) ?? []).map((n) => `[earlier in this chat, triage by Jev: "${n.text.slice(0, 40)}…" → ${n.verdict}]`);
+      if (now) {
+        notes.push(`[triage by Jev: ${now.verdict}]`);
+        earlier.set(key, [...(earlier.get(key) ?? []), now]);
+      }
+      if (notes.length) return { prependContext: notes.join("\n") };
     });
+
+    api.on("session_end", (event, ctx) => earlier.delete(ctx.sessionKey ?? ""));
   },
 });

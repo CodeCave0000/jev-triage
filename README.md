@@ -8,7 +8,7 @@ main model only wakes up for the messages that need it:
 |---|---|
 | `thanks` | the plugin replies `בשמחה! 🙂` itself; the main model is never called |
 | `spam` | the turn ends in silence |
-| `question` / `incident` | the main model gets `[triage by Jev: <kind>, urgent <p>]` prepended |
+| `question` / `incident` | the main model gets `[triage by Jev: <kind>, urgent <p>]` prepended, and the earlier verdicts of the same chat |
 | any score below 0.9 | untouched: the normal agent path |
 
 Every decision is logged: `jev thanks 1.00 urgent 0.39 245ms`. To watch only Jev's decisions:
