@@ -17,9 +17,9 @@ Every decision is logged: `jev thanks 1.00 urgent 0.39 245ms`. To watch only Jev
 openclaw logs --follow | grep "jev "
 ```
 
-Jev triages customer messages only, never heartbeats or cron turns. OpenClaw 2026.9.7 posts a "did not produce a
-visible reply" notice after a user turn that ends in silence; the plugin cancels that notice for spam, so the spammer
-gets nothing.
+Jev sees each incoming message before OpenClaw hands it to the model (the `before_dispatch` hook), so thanks and spam
+end there and a spammer gets nothing back. Commands such as `/new` go straight to OpenClaw, and heartbeat or cron
+turns are never triaged.
 
 ## Requirements
 
