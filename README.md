@@ -37,7 +37,7 @@ openclaw secrets store set TYPESAFE_API_KEY --kind secret        # paste the key
 openclaw config set plugins.entries.typesafe.config.apiKey '{"source":"store","provider":"default","id":"TYPESAFE_API_KEY"}' --strict-json
 openclaw config set agents.defaults.decisionModel typesafe/jev-latest   # or the Decision picker in the Control UI
 
-openclaw plugins install git:github.com/RanyAlbegWein/jev-triage --force --accept-capabilities
+openclaw plugins install git:github.com/CodeCave0000/jev-triage --force --accept-capabilities
 openclaw config set plugins.entries.jev-triage.hooks.allowConversationAccess true
 ```
 
@@ -51,7 +51,7 @@ without explicit consent. `--force` acknowledges that the source is outside Claw
 **No `git` where OpenClaw runs?** (`git --version` says "not found".) Download the folder and install it by path instead:
 
 ```bash
-curl -fsSL https://github.com/RanyAlbegWein/jev-triage/archive/refs/heads/main.tar.gz | tar xz -C /tmp
+curl -fsSL https://github.com/CodeCave0000/jev-triage/archive/refs/heads/main.tar.gz | tar xz -C /tmp
 openclaw plugins install /tmp/jev-triage-main --force --accept-capabilities
 ```
 
