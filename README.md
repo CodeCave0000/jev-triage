@@ -11,7 +11,15 @@ main model only wakes up for the messages that need it:
 | `question` / `incident` | the main model gets `[triage by Jev: <kind>, urgent <p>]` prepended |
 | any score below 0.9 | untouched: the normal agent path |
 
-Every decision is logged: `jev thanks 1.00 urgent 0.38 317ms` (`openclaw logs --follow`).
+Every decision is logged: `jev thanks 1.00 urgent 0.39 245ms`. To watch only Jev's decisions:
+
+```bash
+openclaw logs --follow | grep "jev "
+```
+
+Jev triages customer messages only, never heartbeats or cron turns. OpenClaw 2026.9.7 posts a "did not produce a
+visible reply" notice after a user turn that ends in silence; the plugin cancels that notice for spam, so the spammer
+gets nothing.
 
 ## Requirements
 

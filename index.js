@@ -21,6 +21,7 @@ const QUESTIONS = {
 };
 
 const verdicts = new Map();
+const silenced = new Set(); // sessions whose spam turn must send nothing
 
 export default definePluginEntry({
   id: "jev-triage",
@@ -29,6 +30,7 @@ export default definePluginEntry({
   register(api) {
     // runs first, right before the model call: Jev decides, and can end the turn here
     api.on("before_agent_reply", async (event, ctx) => {
+      silenced.delete(ctx.sessionKey ?? "");
       const t0 = Date.now();
       const out = await api.runtime.decisions.evaluate(
         { state: event.cleanedBody, questions: QUESTIONS },
@@ -40,15 +42,23 @@ export default definePluginEntry({
       api.logger.info(`jev ${kind.choice} ${sure.toFixed(2)} urgent ${urgent.probabilityTrue.toFixed(2)} ${Date.now() - t0}ms`);
       if (sure < 0.9) return; // not sure enough: the message goes to the main model untouched
       if (kind.choice === "thanks") return { handled: true, reply: { text: "בשמחה! 🙂" } };
-      if (kind.choice === "spam") return { handled: true }; // silence, no model call
+      if (kind.choice === "spam") {
+        silenced.add(ctx.sessionKey ?? "");
+        return { handled: true }; // silence, no model call
+      }
       verdicts.set(ctx.runId ?? "", `${kind.choice}, urgent ${urgent.probabilityTrue.toFixed(2)}`);
-    });
+    }, { eligibleTriggers: ["user"] }); // customer messages only, never heartbeats or cron
 
     // then the main model gets the decision instead of making it again
     api.on("before_prompt_build", (event, ctx) => {
       const v = verdicts.get(ctx.runId ?? "");
       verdicts.delete(ctx.runId ?? "");
       if (v) return { prependContext: `[triage by Jev: ${v}]` };
+    });
+
+    // a user turn must end in a reply, so OpenClaw sends a "no visible reply" notice: spam cancels it
+    api.on("message_sending", (event, ctx) => {
+      if (silenced.delete(ctx.sessionKey ?? "")) return { cancel: true, cancelReason: "jev: spam" };
     });
   },
 });
