@@ -1,0 +1,6 @@
+{
+  "id": "jev-triage",
+  "name": "Jev triage",
+  "activation": { "onStartup": true },
+  "configSchema": { "type": "object", "additionalProperties": false }
+}
