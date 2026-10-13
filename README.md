@@ -21,6 +21,13 @@ Jev sees each incoming message before OpenClaw hands it to the model (the `befor
 end there and a spammer gets nothing back. Commands such as `/new` go straight to OpenClaw, and heartbeat or cron
 turns are never triaged.
 
+## Free and local: Laya instead of Jev
+
+[Laya](https://github.com/NandhaKishorM/laya) is an open-source decision model that answers on the same API as Jev. It runs
+inside your OpenClaw container, so no message leaves your server and you need no TypeSafe key. This plugin does not
+change: only the TypeSafe plugin's address does. OpenClaw's TypeSafe plugin rejects Laya's extra fields, so a one-file
+adapter sits in between. Setup, tested numbers and the way back to Jev: [`laya/README.md`](laya/README.md).
+
 ## Requirements
 
 - OpenClaw **2026.9.6 or newer** (the decision-model role); tested on **2026.9.7**
