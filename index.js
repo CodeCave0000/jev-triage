@@ -1,7 +1,7 @@
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 
-// Jev decides, the agent executes: every message is triaged by the agent's
-// decision model before the main model is called.
+// The decision model decides, the agent executes: every message is triaged by
+// the agent's decision model (Jev, or a local Laya server) before the main model is called.
 const QUESTIONS = {
   kind: {
     type: "choice",
@@ -26,9 +26,9 @@ const earlier = new Map(); // this chat's earlier verdicts: the history keeps th
 export default definePluginEntry({
   id: "jev-triage",
   name: "Jev triage",
-  description: "Jev decides before the agent runs.",
+  description: "A decision model (Jev or Laya) decides before the agent runs.",
   register(api) {
-    // runs first, before OpenClaw hands the message to the model: Jev decides, and can end it here
+    // runs first, before OpenClaw hands the message to the model: the decision model decides, and can end it here
     api.on("before_dispatch", async (event, ctx) => {
       const text = (event.body ?? event.content ?? "").trim();
       if (!text || text.startsWith("/")) return; // commands go straight to OpenClaw
@@ -41,11 +41,12 @@ export default definePluginEntry({
       if (out.status !== "ok") return; // no decision model: the normal agent path
       const { kind, urgent } = out.result.answers;
       const sure = kind.probabilities[kind.choice];
-      api.logger.info(`jev ${kind.choice} ${sure.toFixed(2)} urgent ${urgent.probabilityTrue.toFixed(2)} ${Date.now() - t0}ms`);
+      const who = /laya/i.test(out.result.model ?? "") ? "laya" : "jev"; // which model answered
+      api.logger.info(`${who} ${kind.choice} ${sure.toFixed(2)} urgent ${urgent.probabilityTrue.toFixed(2)} ${Date.now() - t0}ms`);
       if (sure < 0.9) return; // not sure enough: the message goes to the main model untouched
       if (kind.choice === "thanks") return { handled: true, text: "בשמחה! 🙂" };
       if (kind.choice === "spam") return { handled: true }; // silence, no model call
-      verdicts.set(ctx.sessionKey ?? "", { text, verdict: `${kind.choice}, urgent ${urgent.probabilityTrue.toFixed(2)}` });
+      verdicts.set(ctx.sessionKey ?? "", { text, who: who === "laya" ? "Laya" : "Jev", verdict: `${kind.choice}, urgent ${urgent.probabilityTrue.toFixed(2)}` });
     });
 
     // then the main model gets the decision instead of making it again
@@ -53,9 +54,9 @@ export default definePluginEntry({
       const key = ctx.sessionKey ?? "";
       const now = verdicts.get(key);
       verdicts.delete(key);
-      const notes = (earlier.get(key) ?? []).map((n) => `[earlier in this chat, triage by Jev: "${n.text.slice(0, 40)}…" → ${n.verdict}]`);
+      const notes = (earlier.get(key) ?? []).map((n) => `[earlier in this chat, triage by ${n.who}: "${n.text.slice(0, 40)}…" → ${n.verdict}]`);
       if (now) {
-        notes.push(`[triage by Jev: ${now.verdict}]`);
+        notes.push(`[triage by ${now.who}: ${now.verdict}]`);
         earlier.set(key, [...(earlier.get(key) ?? []), now]);
       }
       if (notes.length) return { prependContext: notes.join("\n") };
